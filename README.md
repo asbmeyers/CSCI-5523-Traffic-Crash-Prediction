@@ -87,3 +87,4 @@ Boosted trees (XGBoost/LightGBM): pick the strongest model.
 * Adam Meyers
 * Rehan Ahmad
 * Ian Corsiga
+* Jeffrey Qian
