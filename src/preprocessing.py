@@ -16,7 +16,7 @@ def generate_grid(gdf, cell_size_m=5000, crs="EPSG:5070"):
         gdf = gdf.set_crs("EPSG:4326")
 
     # Get gdf in metric crs
-    gdf_m = gdf.to_crs(crs);
+    gdf_m = gdf.to_crs(crs)
 
     # Set minimum and maximum bounds
     minx, miny, maxx, maxy = gdf_m.total_bounds
@@ -67,7 +67,7 @@ def create_cell_day_df(crash_gdf, grid_gdf, start_date, end_date):
 
     # Make sure the CRS matches
     if crash_gdf.crs != grid_gdf.crs:
-        crash_gdf = crash_gdf.to_crs(grid_gds.crs)
+        crash_gdf = crash_gdf.to_crs(grid_gdf.crs)
 
     # Assign each crash to a cell
     crash_with_cells = gpd.sjoin(crash_gdf, grid_gdf[['cell_id', 'geometry']], how='inner', predicate='within')
