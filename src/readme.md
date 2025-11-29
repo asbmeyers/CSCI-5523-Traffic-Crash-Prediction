@@ -102,7 +102,7 @@ from model import build_training_data_from_counts
 X, y = build_training_data_from_counts(Y, S_dict)
 ```
 - `X` has shape `((T-1) * C, D)` where `D = number of taus` (e.g., 3).
-- `y` has shape `((T-1) * C)`, and entries in '{0, 1}'.
+- `y` has shape `((T-1) * C)`, and entries in `{0, 1}`.
 
 Each row of `X` corresponds to a specific `(day t, cell c)` pair predicting day t+1.
 
