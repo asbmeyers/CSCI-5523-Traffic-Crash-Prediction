@@ -135,3 +135,47 @@ $$\nabla = \frac{1}{n}\sum_i r_ix_i + \lambda w,$$
 $$\nabla_b = \frac{1}{n}\sum_ir_i$$
 
 The model uses simple gradient descent to update w and b.
+
+
+### Using the model: Example
+
+After getting the daily count matrix `Y` with shape `(T, C)`:
+
+```python
+import numpy as np
+from model import (
+    compute_hawkes_features,
+    build_training_data_from_counts,
+    LogisticConfig,
+    LogisticHotspot,
+)
+
+# 1. Compute Hawkes-style features
+taus = (3, 7, 30)
+S_dict = compute_hawkes_features(Y, taus=taus)
+
+# 2. Build (X, y)
+X, y = build_training_data_from_counts(Y, S_dict)
+
+# 3. Handle class imbalance
+n_pos = y.sum()
+n_neg = len(y) - n_pos
+pos_weight = n_neg / max(1, n_pos)
+
+# 4. Configure the logistic model
+cfg = LogisticConfig(
+    lr=0.05,       # learning rate (to be tuned)
+    epochs=80,     # number of gradient steps (to be tuned)
+    l2=1e-2,       # L2 strength (to be tuned)
+    pos_weight=pos_weight,
+    fit_intercept=True,
+    seed=42,
+)
+
+# 5. Train
+model = LogisticHotspot(cfg).fit(X, y)
+
+# 6. Predict probabilities
+p_hat = model.predict_proba(X)   # shape (n_samples,)
+y_pred = model.predict(X, threshold=0.5)
+```
