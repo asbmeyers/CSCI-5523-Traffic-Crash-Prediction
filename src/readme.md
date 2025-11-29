@@ -71,6 +71,8 @@ $$
 
 ## 4. Implementation
 
+### 4.1 Compute the Hawkes features:
+
 ```python
 from model import compute_hawkes_features
 
@@ -80,7 +82,8 @@ S_dict = compute_hawkes_features(Y, taus=(3, 7, 30))
 - `S_dict[tau]` is an array of shape `(T, C)` containing `s^{(τ)}_{t,c}`.
 - and `s^{(τ)}[t]` only depends on `Y[0..t-1]`.
 
-### 4.1 Building the training data \( X, y \)
+
+### 4.2 Build the training data \( X, y \)
 
 We want to predict for each cell–day pair: "Will there be at least one crash tomorrow?"
 
@@ -102,4 +105,15 @@ X, y = build_training_data_from_counts(Y, S_dict)
 - `y` has shape `((T-1) * C,)` and entries in {0, 1}.
 
 Each row of `X` corresponds to a specific `(day t, cell c)` pair predicting day t+1.
-  
+
+
+### 4.3 Logistic Model (L2-regularized):
+
+We use a logistic regression model to map features to probability:
+
+$$z_i = x_i^Tw + b,$$
+
+$@\hat{p_i} = \Sigma(z_i) = \frac{1}{1 + e^{-z_i}}$$
+
+for each training sample `i` (a `(t, c)` pair). 
+
