@@ -76,6 +76,9 @@ from model import compute_hawkes_features
 
 S_dict = compute_hawkes_features(Y, taus=(3, 7, 30))
 ```
+- `Y` has shape `(T, C)`.
+- `S_dict[tau]` is an array of shape `(T, C)` containing `s^{(τ)}_{t,c}`.
+- and `s^{(τ)}[t]` only depends on `Y[0..t-1]`.
 
 ### 4.1 Building the training data \( X, y \)
 
@@ -89,4 +92,14 @@ $$y_{t,c} = 1\{Y[t+1,c] \geq 1\}$$
 $$x_{t,c} = \left( s_{t,c}^{\tau_1}, s_{t,c}^{\tau_2}, \dots \right)$$
 
 where $\tau_1, \tau_2, \dots$ are the time scales we chose (e.g. 3, 7, 30 days).
+
+```python
+from model import build_training_data_from_counts
+
+X, y = build_training_data_from_counts(Y, S_dict)
+```
+- `X` has shape `((T-1) * C, D)` where `D = number of taus` (e.g., 3).
+- `y` has shape `((T-1) * C,)` and entries in {0, 1}.
+
+Each row of `X` corresponds to a specific `(day t, cell c)` pair predicting day t+1.
   
