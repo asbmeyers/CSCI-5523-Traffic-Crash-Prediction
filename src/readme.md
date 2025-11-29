@@ -6,13 +6,6 @@ This module implements **two things**:
 2. An **L2-regularized logistic regression model** for predicting  
    > “Will this cell have **at least one crash tomorrow**?”
 
-It is designed to sit **on top of** your team’s preprocessing, which already:
-- builds a spatial grid,
-- assigns crashes to cells,
-- and aggregates them per **cell × day**.
-
-You do **not** need to handle any raw CSV or GIS logic in this file.
-
 ---
 
 ## 1. High-level workflow
