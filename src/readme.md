@@ -137,7 +137,7 @@ $$\nabla_b = \frac{1}{n}\sum_ir_i$$
 The model uses simple gradient descent to update w and b.
 
 
-### Using the model: Example
+### 4.4 Using the model: Example
 
 After getting the daily count matrix `Y` with shape `(T, C)`:
 
