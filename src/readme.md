@@ -79,7 +79,7 @@ from model import compute_hawkes_features
 S_dict = compute_hawkes_features(Y, taus=(3, 7, 30))
 ```
 - `Y` has shape `(T, C)`.
-- `S_dict[tau]` is an array of shape `(T, C)` containing `$s^{(τ)}_{t,c}$`.
+- `S_dict[tau]` is an array of shape `(T, C)` containing $s^{(τ)}_{t,c}$.
 - and `s^{(τ)}[t]` only depends on `Y[0..t-1]`.
 
 
