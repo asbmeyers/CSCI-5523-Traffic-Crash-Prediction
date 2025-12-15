@@ -17,6 +17,7 @@ def compute_hawkes_features(Y, taus=(3, 7, 30)):
               S_tau[t, c] = s_{t,c}^{(tau)} = rho * s_{t-1,c}^{(tau)} + Y[t-1,c]
               using only past days (no leakage)
     """
+    Y = np.asarray(Y)
     T, C = Y.shape
     S_dict = {}
 
@@ -45,6 +46,7 @@ def build_training_data_from_counts(Y, S_dict):
       X: ((T-1) * C, D) feature matrix
       y: ((T-1) * C,) labels (0/1)
     """
+    Y = np.asarray(Y)
     T, C = Y.shape
     taus_sorted = sorted(S_dict.keys())
 

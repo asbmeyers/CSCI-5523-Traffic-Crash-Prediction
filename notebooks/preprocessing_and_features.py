@@ -24,6 +24,14 @@
 #     version: 3.10.6
 # ---
 
+# %% [markdown]
+# Data from: https://www.ncei.noaa.gov/cdo-web/search?datasetid=GHCND
+#
+# Collected Daily Summaries from 3 different stations to find average weather across regions of Minnesota: 
+# - INTERNATIONAL FALLS INTERNATIONAL AIRPORT, MN US (N Region)
+# - MINNEAPOLIS ST. PAUL INTERNATIONAL AIRPORT, MN US (SE Region)
+# - ROCHESTER INTERNATIONAL AIRPORT, MN US (S/SE Region)
+
 # %%
 import sys
 import os
@@ -35,8 +43,6 @@ import numpy as np
 import geopandas as gpd
 from shapely import wkt
 import warnings
-# %load_ext autoreload
-# %autoreload 2
 
 warnings.filterwarnings('ignore', category=UserWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -45,6 +51,20 @@ warnings.filterwarnings('default', category=DeprecationWarning)
 # %%
 df = pd.read_csv('../data/raw/weather_data.csv')
 df.tail(1)
+
+# %% [markdown]
+# Weather Type Codes
+# - WT01	Fog, ice fog, or freezing fog (or haze): Reduced visibility, increased slickness.
+# - WT02	Heavy fog or thick fog: Severely reduced visibility (major crash factor).
+# - WT03	Thunder: Often correlated with heavy rain and sudden visibility changes.
+# - WT04	Ice pellets, sleet, snow pellets, or small hail: Immediate increase in road slickness and difficulty controlling vehicles.
+# - WT05	Hail (larger): Can cause property damage and sudden driver maneuvers.
+# - WT06	Glaze or rime (freezing rain): The most dangerous condition for black ice formation.
+# - WT08	Smoke or ash: Reduced air quality and significant visibility reduction.
+# - WT09	Blowing or drifting snow: Reduced visibility and accumulation creating slick, uneven conditions.
+
+# %% [markdown]
+# ## 1. Initial Weather Data 
 
 # %%
 df['DATE'] = pd.to_datetime(df['DATE'], format='%Y-%m-%d')
@@ -62,6 +82,11 @@ for col in cols_to_check:
 # Initial NaN counts
 print(f'Initial NaN values in TAVG: {df["TAVG"].isna().sum()}, NaN values in PRCP: {df["PRCP"].isna().sum()}, NaN values in SNOW: {df["SNOW"].isna().sum()}')
 
+# %% [markdown]
+# ## 2. Dealing with NaNs for Numerical Features
+#
+#
+
 # %%
 numerical_features = ['TAVG', 'PRCP', 'SNOW'] 
 
@@ -76,6 +101,9 @@ for col in numerical_features:
     df[col] = df[col].fillna(daily_median_across_stations)
     print(f"NaNs remaining in {col} after peer median fill: {df[col].isnull().sum()}")
 
+# %% [markdown]
+# ## 3. Aggregate and Merge
+
 # %%
 daily_median_weather = df.groupby('DATE')[numerical_features].median().reset_index()
 daily_median_weather.columns = ['DATE'] + [f'{col}_MEDIAN' for col in numerical_features]
@@ -88,6 +116,26 @@ print(final_weather_df.sample(10))
 print(final_weather_df.info())
 
 
+# %% [markdown]
+# ## 4. Save Output for Weather (Optional)
+
+# %%
+""""
+# Create processed data directory if it doesn't exist
+import os
+processed_dir = '../data/processed'
+os.makedirs(processed_dir, exist_ok=True)
+
+# Save the cleaned dataset
+cleaned_file_path = os.path.join(processed_dir, 'cleaned_weather.csv')
+final_weather_df.to_csv(cleaned_file_path, index=False)
+
+print(f"Cleaned dataset saved to: {cleaned_file_path}")
+"""
+
+# %% [markdown]
+# ## 5. Initial Traffic Data
+
 # %%
 df = pd.read_csv('../data/raw/all_crashes.csv')
 
@@ -98,7 +146,6 @@ display(df.head())
 
 print("\nDataset Info:")
 df.info()
-
 
 # %%
 # Convert the 'geom' column from WKT to geometry objects
@@ -111,6 +158,8 @@ gdf['day_of_week'] = gdf['DateOfIncident'].dt.day_name()
 gdf['month'] = gdf['DateOfIncident'].dt.month_name()
 display(gdf[['DateOfIncident', 'DATE','day_of_week', 'month']].head())
 
+# %% [markdown]
+# Keep info about location, environment, weather/surface conditions, temporal for feature consideration
 
 # %%
 selected_cols = ['geometry', 'CountyNameTxt', 'Region', 
@@ -119,9 +168,17 @@ new_df = gdf[selected_cols].copy()
 
 new_df.head()
 
+# %% [markdown]
+# ## 6. Handle Missing Values for Traffic
+
+# %%
 missing_values = new_df.isnull().sum()
 print("Missing Values in Each Column:")
 print(missing_values)
+
+# %% [markdown]
+# Find values that are null, missing, or unknown and mark them as 'unknown' for uniformity
+#
 
 # %%
 for col in new_df.columns:
@@ -163,6 +220,24 @@ for col, stats in unknown_stats.items():
 display(new_df.describe(include='all'))
 display(pd.DataFrame(new_df.columns.tolist(), columns=["Column Name"]))
 
+# %% [markdown]
+# ## 7. Save Cleaned Dataset for Traffic (Optional)
+
+# %%
+""""
+processed_dir = '../data/processed'
+os.makedirs(processed_dir, exist_ok=True)
+
+# Save the cleaned dataset
+cleaned_file_path = os.path.join(processed_dir, 'cleaned_crashes.csv')
+new_df.to_csv(cleaned_file_path, index=False)
+
+print(f"Cleaned dataset saved to: {cleaned_file_path}")
+"""
+
+# %% [markdown]
+# ## 8. Combine Datasets
+
 # %%
 from src.preprocessing import build_master_dataset
 
@@ -202,14 +277,11 @@ master_df.to_csv(final_df_path, index=False)
 master_df.tail(2)
 
 # %%
-import src.model as model
+cutoff = pd.Timestamp("2024-01-01")
+df_training = master_df[master_df["DATE"] < cutoff]
+df_testing = master_df[master_df["DATE"] >= cutoff]
 
-numeric_cols = master_df.select_dtypes(include=[np.number]).columns
-master_df_numeric = master_df[numeric_cols].to_numpy(dtype=np.float32)
-
-S_dict = model.compute_hawkes_features(master_df_numeric)
-
-# %%
-X, Y = model.build_training_data_from_counts(master_df_numeric, S_dict)
+df_training.to_csv(os.path.join(processed_dir, 'master_training.csv'), index=False)
+df_testing.to_csv(os.path.join(processed_dir, 'master_testing.csv'), index=False)
 
 # %%
