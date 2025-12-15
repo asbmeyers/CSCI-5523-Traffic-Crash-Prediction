@@ -151,7 +151,24 @@ def hit_rate_at_k(y_true, y_prob, k):
     top_idx = idx_sorted[:k]
     hits = y_true[top_idx].sum()
     return hits / float(k)
+    
+def lift_at_k(y_true, y_prob, k):
+    base_rate = y_true.mean()
+    hr = hit_rate_at_k(y_true, y_prob, k)
+    return hr / base_rate
 
+def expected_calibration_error(y_true, y_prob, n_bins=10):
+    bins = np.linspace(0.0, 1.0, n_bins + 1)
+    bin_ids = np.digitize(y_prob, bins) - 1
+
+    ece = 0.0
+    for i in range(n_bins):
+        mask = bin_ids == i
+        if mask.any():
+            acc = y_true[mask].mean()
+            conf = y_prob[mask].mean()
+            ece += np.abs(acc - conf) * mask.mean()
+    return ece
 
 # Get probabilities on validation set
 y_val_proba = ann_model.predict_proba(X_val)[:, 1]
@@ -164,6 +181,8 @@ roc_auc = roc_auc_score(y_val, y_val_proba)
 # Choose a k for hit-rate
 k = 500
 hr_k = hit_rate_at_k(y_val, y_val_proba, k)
+lift_k = lift_at_k(y_val, y_val_proba, k)
+ece = expected_calibration_error(y_val, y_val_proba, n_bins=10)
 
 print("=== ANN (MLP) Model – Validation Metrics ===")
 print(f"Brier score:        {brier:.6f}")
@@ -171,6 +190,37 @@ print(f"Log-loss:           {logloss:.6f}")
 print(f"PR-AUC (avg prec):  {pr_auc:.6f}")
 print(f"ROC-AUC:            {roc_auc:.6f}")
 print(f"Hit-rate@k (k={k}): {hr_k:.6f}")
+print(f"Lift@k (k={k}):     {lift_k:.2f}x")
+print(f"ECE (10 bins):      {ece:.4f}")
+
+# %%
+import matplotlib.pyplot as plt
+
+def reliability_plot(y_true, y_proba, n_bins=10):
+    bins = np.linspace(0.0, 1.0, n_bins + 1)
+    bin_centers = (bins[:-1] + bins[1:]) / 2
+
+    bin_ids = np.digitize(y_proba, bins) - 1
+    accs = []
+    confs = []
+
+    for i in range(n_bins):
+        mask = bin_ids == i
+        if mask.any():
+            accs.append(y_true[mask].mean())
+            confs.append(y_proba[mask].mean())
+
+    plt.figure(figsize=(5, 5))
+    plt.plot([0, 1], [0, 1], linestyle="--", label="Theoretical")
+    plt.plot(confs, accs, marker="o", label="ANN Model")
+    plt.xlabel("Model probability")
+    plt.ylabel("Observed frequency")
+    plt.title("Reliability Plot")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+reliability_plot(y_val, y_val_proba)
 
 
 # %%
